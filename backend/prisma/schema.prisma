@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectType {
+  PROJECT
+  TEMPLATE
+}
+
+enum FileKind {
+  LOGO
+  FLOW_IMAGE
+  EXPORT
+  IMPORT
+}
+
+model User {
+  id           String    @id @default(uuid())
+  login        String    @unique
+  passwordHash String
+  displayName  String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  projects     Project[]
+  rates        Rate[]    @relation("RateCreator")
+  versions     Version[]
+}
+
+model Project {
+  id          String      @id @default(uuid())
+  type        ProjectType @default(PROJECT)
+  name        String
+  client      String      @default("")
+  brand       String      @default("")
+  currency    String      @default("KZT")
+  logoFileId  String?
+  ownerId     String
+  owner       User        @relation(fields: [ownerId], references: [id])
+  dataVersion Int         @default(1)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  deletedAt   DateTime?
+  ceDocument  CeDocument?
+  flows       Flow[]
+  files       FileAsset[]
+  versions    Version[]
+
+  @@index([type])
+  @@index([ownerId])
+}
+
+model Flow {
+  id        String     @id @default(uuid())
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  order     Int        @default(0)
+  viewport  Json       @default("{}")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  nodes     FlowNode[]
+  edges     FlowEdge[]
+
+  @@index([projectId])
+}
+
+model FlowNode {
+  id                     String   @id @default(uuid())
+  flowId                 String
+  flow                   Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  slideNumber            String   @default("")
+  title                  String   @default("")
+  designType             String   @default("")
+  codingType             String   @default("")
+  popupsCount            Int      @default(0)
+  comments               String   @default("")
+  positionX              Float    @default(0)
+  positionY              Float    @default(0)
+  mainImageFileId        String?
+  additionalImageFileIds Json     @default("[]")
+  compact                Boolean  @default(true)
+  meta                   Json     @default("{}")
+
+  @@index([flowId])
+}
+
+model FlowEdge {
+  id           String @id
+  flowId       String
+  flow         Flow   @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  sourceNodeId String
+  targetNodeId String
+  label        String @default("")
+  color        String @default("#64748b")
+  lineType     String @default("smoothstep")
+  meta         Json   @default("{}")
+
+  @@index([flowId])
+}
+
+model FileAsset {
+  id         String   @id @default(uuid())
+  projectId  String?
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  storageKey String   @unique
+  filename   String
+  mimeType   String
+  size       Int
+  kind       FileKind @default(FLOW_IMAGE)
+  createdBy  String?
+  createdAt  DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model CeDocument {
+  id            String   @id @default(uuid())
+  projectId     String   @unique
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  requisites    Json
+  blocks        Json
+  ratesSnapshot Json
+  adjustments   Json
+  totals        Json
+  updatedAt     DateTime @updatedAt
+}
+
+model Rate {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  amount    Int
+  currency  String   @default("KZT")
+  category  String
+  isActive  Boolean  @default(true)
+  createdBy String?
+  creator   User?    @relation("RateCreator", fields: [createdBy], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Version {
+  id         String   @id @default(uuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  comment    String
+  actionType String
+  snapshot   Json
+  createdAt  DateTime @default(now())
+
+  @@index([projectId])
+  @@index([createdAt])
+}
