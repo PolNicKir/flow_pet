@@ -12,7 +12,7 @@ Web-приложение для коммерческих смет CE и producti
 - проекты и шаблоны;
 - базовая CE с backend-пересчётом;
 - справочник ставок;
-- frontend на React + Vite.
+- frontend на React + Vite..
 
 ## Запуск
 
